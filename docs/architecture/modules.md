@@ -29,13 +29,25 @@ O Reader é responsável por armazenar e consultar a preferência de apresentaç
 
 ### 2.2. Learning
 
-**Responsabilidade:** gerenciar o estado de aprendizagem do usuário e o histórico de revisões.
+**Responsabilidade:** gerenciar o vocabulário do usuário, o estado de aprendizagem, as declarações de conhecimento e o histórico de revisões.
 
-O Learning concentra as regras relacionadas ao acompanhamento da aprendizagem, incluindo o estado atual de cada item aprendido, o registro das revisões e o cálculo dos próximos momentos de revisão por meio de uma estratégia de repetição espaçada (SRS).
+O Learning mantém as informações que representam o conhecimento estimado do usuário sobre cada palavra e registra as revisões reais realizadas. Também é responsável pelas regras relacionadas à atualização desse estado e à estratégia de repetição espaçada (SRS).
+
+O conhecimento de uma palavra deve ser tratado separadamente do conhecimento dos kanji que a compõem: conhecer um kanji não significa necessariamente conhecer uma palavra que o utiliza.
 
 O módulo deve permitir que a estratégia de repetição espaçada seja substituída sem exigir mudanças desnecessárias nos demais módulos.
 
-**Limite:** os outros módulos devem interagir com Learning por meio de uma interface explícita, sem acessar diretamente suas implementações internas.
+**Palavras declaradas como conhecidas**: Quando o usuário declara conhecer uma palavra, o Learning deve adicioná-la ao vocabulário sem criar uma revisão fictícia e sem iniciar uma sessão de revisão imediata. A declaração de conhecimento é informação distinta do histórico de revisões.
+
+A palavra permanece em `AWAITING_FIRST_REVIEW` até a primeira revisão real. O sistema deve prever essa primeira revisão para um intervalo relativamente curto, considerando a declaração como informação inicial para a estratégia SRS. Uma resposta correta nessa primeira revisão pode levar a um intervalo maior, conforme a estratégia escolhida.
+
+As datas de adição ao vocabulário, da última revisão real e da próxima revisão têm significados diferentes e não devem ser tratadas como equivalentes. A forma de armazenar a declaração e a lógica exata de inicialização do SRS ainda serão definidas; a adaptação deve ficar concentrada no fluxo de inicialização, evitando condicionais especiais espalhadas pela lógica normal de revisão.
+
+Limites: o Learning não decide como o conteúdo é apresentado nem mantém a preferência manual de furigana. Outros módulos acessam suas capacidades por meio de contratos explícitos, sem depender de entidades, tabelas ou implementações internas.
+
+O limiar e a métrica que determinam o nível de aprendizagem ainda precisam ser especificados. A implementação também deverá evitar consultas individuais desnecessárias para cada palavra, podendo consultar em lote as informações de um trecho.
+
+
 
 ### 2.3. Processing
 
@@ -61,14 +73,12 @@ No MVP, a execução será iniciada manualmente por um administrador. O módulo 
 
 O Reader precisa consultar o Learning para obter o estado de aprendizagem das palavras apresentadas. Essa consulta deve ocorrer por meio de uma interface explícita, que exponha somente os dados necessários à experiência de leitura.
 
-Para cada palavra, o Reader resolve a exibição de furigana nesta ordem:
-
-1. Se a preferência manual for `SHOW`, exibe furigana.
-2. Se a preferência manual for `HIDE`, oculta furigana.
-3. Se a preferência for `AUTO` ou não estiver definida, consulta o estado de aprendizagem no Learning.
-4. Se o estado de aprendizagem atingir ou ultrapassar o limiar definido, oculta furigana; caso contrário, exibe furigana.
-
-O limiar e a métrica que determinam o nível de aprendizagem ainda precisam ser especificados. A implementação também deverá evitar consultas individuais desnecessárias para cada palavra, podendo consultar em lote as informações de um trecho.
+Para a integração com o Reader, o Learning deve disponibilizar, por palavra, um estado do ciclo de aprendizagem e o grau de conhecimento quando disponível. Os estados conceituais são:
+- `NOT_STUDIED`: a palavra ainda não foi adicionada ao vocabulário do usuário.
+- `AWAITING_FIRST_REVIEW`: a palavra foi adicionada ao vocabulário, mas ainda não possui uma revisão real registrada.
+- `REVIEWED`: a palavra possui pelo menos uma revisão real registrada.
+  
+O estado do ciclo de aprendizagem não é o mesmo que o grau de conhecimento. O grau pode estar indisponível antes da primeira revisão; essa ausência deve ser explícita no contrato.
 
 ## 4. Questões pendentes
 
