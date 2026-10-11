@@ -1,6 +1,6 @@
 # Módulos do Sistema
 
-**Versão:** 0.1  
+**Versão:** 0.2
 **Status:** Proposta inicial
 
 ## 1. Objetivo
@@ -13,13 +13,19 @@ O sistema será organizado como um monólito modular, no qual cada módulo repre
 
 ### 2.1. Reader
 
-**Responsabilidade:** gerenciar as funcionalidades relacionadas à experiência de leitura do usuário.
+**Responsabilidade:** gerenciar a experiência de leitura e as regras de apresentação do conteúdo.
 
-O Reader é responsável pela interação com o conteúdo durante a leitura. Quando necessário, ele utiliza interfaces disponibilizadas por outros módulos para acessar funcionalidades complementares.
+O Reader apresenta o conteúdo ao usuário e decide como renderizar palavras, incluindo se deve exibir furigana. Essa decisão considera a preferência manual do usuário para a palavra e, quando não existe uma preferência definida, o estado de aprendizagem fornecido pelo Learning.
 
-O Reader não deve conhecer os detalhes internos do estado de aprendizagem do usuário nem implementar diretamente as regras de aprendizagem.
+O Reader é responsável por armazenar e consultar a preferência de apresentação de furigana por palavra. A preferência possui três estados conceituais:
 
-**Limite:** sua responsabilidade está relacionada à experiência de leitura, e não à gestão das regras de aprendizagem.
+- `SHOW`: exibir furigana independentemente do estado de aprendizagem.
+- `HIDE`: ocultar furigana independentemente do estado de aprendizagem.
+- `AUTO`: decidir automaticamente com base no estado de aprendizagem.
+
+`AUTO` representa a ausência de uma preferência manual explícita e poderá ser representado por um valor nulo na persistência, caso essa convenção seja adotada.
+
+**Limites:** o Reader não mantém nem calcula o estado de aprendizagem. Ele consulta o Learning por meio de uma interface explícita e aplica a regra de apresentação localmente.
 
 ### 2.2. Learning
 
@@ -41,11 +47,39 @@ No MVP, a execução será iniciada manualmente por um administrador. O módulo 
 
 **Limite:** o ciclo de vida do processamento deve ser independente do ciclo de vida da aplicação principal. Os mecanismos de acompanhamento, persistência dos resultados e tratamento de falhas ainda precisam ser especificados.
 
-## 3. Comunicação entre módulos
+## 3 Comunicação entre módulos
 
-Os módulos devem interagir por meio de interfaces explícitas, evitando dependências desnecessárias sobre suas estruturas internas.
+ Princípios de comunicação
 
-- **Reader → Learning:** o Reader solicita operações relacionadas à aprendizagem quando necessário, sem conhecer a implementação interna do Learning.
-- **Processing → demais módulos:** eventuais integrações dependerão dos requisitos das tarefas processadas e ainda precisam ser definidas.
+- Módulos interagem por interfaces explícitas.
+- Um módulo não deve acessar diretamente os detalhes internos de outro.
+- A comunicação entre módulos dentro do monólito não exige serviços separados nem comunicação por rede.
+- A camada de aplicação poderá coordenar fluxos que envolvam mais de um módulo, sem transferir as regras internas de um módulo para outro.
 
-A comunicação entre módulos não implica a necessidade de serviços separados ou comunicação por rede. Como o sistema será inicialmente um monólito modular, as interfaces poderão ser utilizadas dentro da própria aplicação.
+
+### 3.1. Interação entre Reader e Learning
+
+O Reader precisa consultar o Learning para obter o estado de aprendizagem das palavras apresentadas. Essa consulta deve ocorrer por meio de uma interface explícita, que exponha somente os dados necessários à experiência de leitura.
+
+Para cada palavra, o Reader resolve a exibição de furigana nesta ordem:
+
+1. Se a preferência manual for `SHOW`, exibe furigana.
+2. Se a preferência manual for `HIDE`, oculta furigana.
+3. Se a preferência for `AUTO` ou não estiver definida, consulta o estado de aprendizagem no Learning.
+4. Se o estado de aprendizagem atingir ou ultrapassar o limiar definido, oculta furigana; caso contrário, exibe furigana.
+
+O limiar e a métrica que determinam o nível de aprendizagem ainda precisam ser especificados. A implementação também deverá evitar consultas individuais desnecessárias para cada palavra, podendo consultar em lote as informações de um trecho.
+
+## 4. Questões pendentes
+
+- Definir o contrato de consulta em lote do estado de aprendizagem para o Reader.
+- Definir a métrica e o limiar usados pela decisão automática de furigana.
+- Definir como a preferência manual será identificada por usuário e por palavra.
+- Definir persistência, erros e atualização dos dados consultados.
+- Especificar os contratos de execução e de resultado do Processing.
+
+## 5. Evolução
+
+Esta divisão é uma proposta inicial para o MVP. Novos módulos ou subdivisões deverão ser introduzidos somente quando houver responsabilidades distintas que justifiquem a separação.
+
+
