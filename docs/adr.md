@@ -1,6 +1,6 @@
 # Documentação de Arquitetura — MVP
 
-**Versão:** 0.1  
+**Versão:** 0.2 
 **Status:** Em desenvolvimento  
 **Escopo:** Arquitetura do MVP
 
@@ -22,6 +22,8 @@ O projeto seguirá estes princípios:
 4. **Independência do domínio:** as regras de negócio não devem depender diretamente de frameworks ou mecanismos de persistência.
 5. **Evolução incremental:** permitir substituição de componentes sem exigir uma reestruturação completa do sistema.
 6. **Interfaces explícitas:** módulos devem interagir por contratos definidos, sem depender de comportamentos internos uns dos outros.
+
+---
 
 ## 3. ADR-001 — Monólito modular organizado por domínio
 
@@ -153,35 +155,95 @@ A escolha de manter os conceitos em `learning` não significa que todas as funci
 
 O Reader precisa interagir com as funcionalidades de aprendizagem. Entretanto, não deve conhecer os comportamentos internos, as entidades ou os mecanismos de persistência utilizados pelo módulo Learning.
 
-Uma dependência direta dessas implementações dificultaria a evolução independente dos módulos.
+Além disso, o Reader precisa consultar o estado de aprendizagem das palavras para aplicar regras de apresentação, incluindo a exibição automática de furigana. É necessário representar também palavras que o usuário declara conhecer, mas que ainda não passaram por uma revisão no sistema.
 
 ### Decisão
 
-O Reader deverá interagir com Learning por meio de uma interface explícita.
+O Reader deverá interagir com Learning por meio de uma interface explícita. O contrato deverá representar as operações de aprendizagem de que o Reader realmente necessita, sem expor detalhes internos de implementação.
 
-O contrato deverá representar as operações de aprendizagem de que o Reader realmente necessita, sem expor detalhes internos de implementação.
+A camada de aplicação responsável pela coordenação dos módulos deverá organizar os fluxos que envolvam mais de um módulo, quando necessário.
 
-A camada de aplicação responsável pela coordenação dos módulos deverá organizar os fluxos que envolvam mais de um módulo.
+#### Responsabilidades dos módulos
+
+- **Reader:** apresenta o conteúdo, mantém a preferência manual de exibição de furigana por palavra e decide como renderizar cada palavra.
+- **Learning:** gerencia o vocabulário do usuário, o estado de aprendizagem, as declarações de conhecimento, o histórico de revisões e a estratégia de repetição espaçada (SRS).
+- O Reader não conhece as entidades internas, tabelas, algoritmo SRS ou mecanismos de persistência do Learning.
+- O Learning não decide como o Reader apresenta o conteúdo e não mantém a preferência manual de furigana.
+
+#### Estado de aprendizagem exposto ao Reader
+
+O contrato conceitual deverá permitir ao Reader distinguir os seguintes estados:
+
+- `NOT_STUDIED`: a palavra ainda não foi adicionada ao vocabulário do usuário no Learning.
+- `AWAITING_FIRST_REVIEW`: a palavra está no vocabulário, mas ainda não possui uma revisão real registrada.
+- `REVIEWED`: existe pelo menos uma revisão real registrada para a palavra.
+
+O estado do ciclo de aprendizagem é distinto do grau de conhecimento. O grau de conhecimento pode estar indisponível, especialmente antes da primeira revisão. Nesse caso, o contrato deverá representar explicitamente a ausência do valor, em vez de inventar um grau.
+
+O conhecimento de uma palavra é independente do conhecimento dos kanji que a compõem. Conhecer um kanji não implica, por si só, conhecer uma palavra que o utiliza.
+
+No MVP, o Reader precisa apenas do estado de aprendizagem e do grau de conhecimento, quando disponível. Histórico, datas de revisão e estatísticas não precisam ser expostos sem uma necessidade concreta.
+
+#### Palavras declaradas como conhecidas
+
+- Quando o usuário declara conhecer uma palavra, o Learning deve adicioná-la ao vocabulário sem registrar uma revisão que não aconteceu.
+- A declaração de conhecimento deve ser representada separadamente do histórico de revisões.
+- A palavra permanece em `AWAITING_FIRST_REVIEW` até que uma revisão real seja registrada, mesmo que o usuário a tenha declarado conhecida.
+- A primeira revisão deve ser prevista para um intervalo relativamente curto, sem exigir uma sessão de revisão imediata no momento da declaração.
+- A declaração pode informar a inicialização do estado de aprendizagem e do agendamento pelo SRS. Se a primeira revisão for respondida corretamente, o algoritmo poderá então definir um intervalo maior, de acordo com sua estratégia.
+- A data em que a palavra foi adicionada, a data da última revisão real e a próxima data de revisão são conceitos distintos. A data de adição não deve ser registrada como se fosse uma revisão.
+- A inicialização especial decorrente de uma declaração de conhecimento deve ficar concentrada no fluxo de inicialização do Learning/SRS, evitando espalhar condições especiais pela lógica normal de revisão.
+
+O algoritmo SRS, a representação interna da declaração, os intervalos concretos e a regra exata de inicialização permanecem pendentes. Esta decisão define o comportamento esperado, não a implementação específica.
+
+#### Preferência de furigana e regra de apresentação
+
+A preferência manual de furigana descreve como o usuário deseja visualizar o conteúdo; o estado de aprendizagem representa o conhecimento estimado do usuário. São informações distintas.
+
+A preferência possui três estados conceituais:
+
+- `SHOW`: exibir furigana, independentemente do estado de aprendizagem.
+- `HIDE`: ocultar furigana, independentemente do estado de aprendizagem.
+- `AUTO`: decidir com base no estado de aprendizagem. `AUTO` também representa a ausência de preferência manual explícita.
+
+A regra de apresentação é:
+
+1. Se a preferência for `SHOW`, o Reader exibe furigana.
+2. Se a preferência for `HIDE`, o Reader oculta furigana.
+3. Se a preferência for `AUTO`, ou não estiver definida, o Reader consulta o estado de aprendizagem no Learning.
+4. O Reader aplica o limiar de conhecimento definido para ocultar automaticamente o furigana; abaixo do limiar, exibe furigana.
+
+A métrica e o limiar usados nessa decisão ainda não estão definidos e deverão ser formalizados separadamente.
+
+#### Forma de consulta
+
+O Reader poderá enviar ao Learning, em uma única consulta, o conjunto de palavras presentes no trecho exibido e receber o estado correspondente a cada palavra. A consulta em lote é a abordagem preferida para evitar chamadas individuais desnecessárias.
+
+O formato exato da operação, a identificação do usuário, os tipos concretos de dados e a política de erros ainda serão definidos durante o detalhamento do contrato.
 
 ### Consequências positivas
 
 - Reduz o acoplamento entre Reader e Learning.
 - Permite alterar a implementação interna de Learning sem exigir mudanças desnecessárias no Reader.
 - Facilita testar o Reader utilizando uma implementação substituta da interface.
-- Torna as dependências entre módulos mais explícitas.
+- Distingue declaração de conhecimento de evidência obtida em revisões reais.
+- Mantém o contrato do Reader focado nos dados necessários à experiência de leitura.
 
 ### Consequências negativas
 
 - O contrato precisa ser cuidadosamente definido.
 - Alterações no contrato podem afetar seus consumidores.
 - A interface não deve se transformar em uma camada genérica com operações que o sistema não utiliza.
+- O SRS precisará atender ao comportamento esperado para palavras declaradas conhecidas, sem tratar a declaração como revisão real.
 
 ### Questões ainda abertas
 
 - Quais operações o Reader precisa solicitar ao Learning?
 - Quais dados devem ser retornados por cada operação?
 - Como serão representados erros e operações inválidas?
-- Em quais casos a coordenação deve ocorrer na camada de aplicação?
+- Como será identificada a correspondência entre as palavras solicitadas e os resultados?
+- Qual métrica e qual limiar serão usados para a decisão automática de furigana?
+- Como será representada internamente a declaração de conhecimento e como ela inicializará o SRS?
 
 Essas questões serão definidas a partir dos fluxos concretos do MVP.
 
@@ -242,13 +304,14 @@ Essas decisões serão tomadas antes de formalizar o mecanismo de execução def
 
 Os seguintes tópicos ainda precisam ser especificados:
 
-1. Contratos concretos entre Reader e Learning.
+1. Contrato técnico entre Reader e Learning, incluindo consulta em lote, identificação do usuário, formato dos resultados e tratamento de erros.
 2. Casos de uso e responsabilidades das camadas de aplicação.
 3. Modelo de dados de Learner e ReviewLog.
-4. Contrato e ciclo de vida da estratégia SRS.
+4. Contrato e ciclo de vida da estratégia SRS, incluindo a inicialização de palavras declaradas conhecidas.
 5. Limites transacionais entre estado atual e histórico.
 6. Persistência e acompanhamento das execuções de processamento.
 7. Tratamento de erros e recuperação após falhas.
+8. Métrica e limiar usados para a decisão automática de exibição de furigana.
 
 Uma decisão pendente não representa necessariamente um problema arquitetural. Significa apenas que ainda não há informação suficiente para estabelecer uma solução definitiva.
 
@@ -265,6 +328,6 @@ Cada ADR deverá conter:
 - Consequências positivas e negativas.
 - Questões pendentes, quando aplicável.
 
-Decisões substituídas deverão ser marcadas como superseded, mantendo o histórico e a justificativa para a mudança.
+Decisões substituídas deverão ser marcadas como `Superseded`, mantendo o histórico e a justificativa para a mudança.
 
 O objetivo desta documentação não é prever toda a implementação, mas preservar as decisões importantes e tornar explícitas as razões pelas quais a arquitetura evolui de determinada maneira.
