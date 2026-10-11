@@ -80,6 +80,21 @@ Para a integração com o Reader, o Learning deve disponibilizar, por palavra, u
   
 O estado do ciclo de aprendizagem não é o mesmo que o grau de conhecimento. O grau pode estar indisponível antes da primeira revisão; essa ausência deve ser explícita no contrato.
 
+3.1.1. ** Fluxo de consulta**
+1. O Reader identifica as palavras presentes no trecho que será exibido.
+2. O Reader envia ao Learning, por meio de uma interface explícita, uma consulta contendo o conjunto de palavras e o contexto de usuário necessário.
+3. O Learning retorna um resultado para cada palavra, sem expor suas entidades internas ou seu histórico completo.
+4. O Reader associa os resultados às palavras e decide como renderizar o conteúdo.
+A consulta em lote é preferida para evitar uma chamada separada para cada palavra. O contrato concreto ainda deverá definir a forma de identificação das palavras, os tipos de retorno e o tratamento de falhas.
+
+3.1.2. Dados conceituais retornados
+Para cada palavra, o resultado precisa permitir distinguir:
+Campo conceitual	Significado
+Estado de aprendizagem	NOT_STUDIED, AWAITING_FIRST_REVIEW ou REVIEWED
+Grau de conhecimento	Valor fornecido pelo Learning quando disponível; caso contrário, ausência explícita
+
+O Reader não precisa receber datas de revisão, histórico detalhado ou estatísticas para a funcionalidade atual. Esses dados só deverão ser adicionados ao contrato se uma funcionalidade concreta passar a exigi-los.
+
 ## 4. Questões pendentes
 
 - Definir o contrato de consulta em lote do estado de aprendizagem para o Reader.
