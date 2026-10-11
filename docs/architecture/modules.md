@@ -87,11 +87,12 @@ O estado do ciclo de aprendizagem não é o mesmo que o grau de conhecimento. O 
 4. O Reader associa os resultados às palavras e decide como renderizar o conteúdo.
 A consulta em lote é preferida para evitar uma chamada separada para cada palavra. O contrato concreto ainda deverá definir a forma de identificação das palavras, os tipos de retorno e o tratamento de falhas.
 
-3.1.2. Dados conceituais retornados
+3.1.2. **Dados conceituais retornados**
+
 Para cada palavra, o resultado precisa permitir distinguir:
-Campo conceitual	Significado
-Estado de aprendizagem	NOT_STUDIED, AWAITING_FIRST_REVIEW ou REVIEWED
-Grau de conhecimento	Valor fornecido pelo Learning quando disponível; caso contrário, ausência explícita
+- Campo conceitual	Significado
+- Estado de aprendizagem	NOT_STUDIED, AWAITING_FIRST_REVIEW ou REVIEWED
+- Grau de conhecimento	Valor fornecido pelo Learning quando disponível; caso contrário, ausência explícita
 
 O Reader não precisa receber datas de revisão, histórico detalhado ou estatísticas para a funcionalidade atual. Esses dados só deverão ser adicionados ao contrato se uma funcionalidade concreta passar a exigi-los.
 
