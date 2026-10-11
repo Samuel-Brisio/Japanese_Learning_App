@@ -90,9 +90,8 @@ A consulta em lote é preferida para evitar uma chamada separada para cada palav
 3.1.2. **Dados conceituais retornados**
 
 Para cada palavra, o resultado precisa permitir distinguir:
-- Campo conceitual	Significado
-- Estado de aprendizagem	NOT_STUDIED, AWAITING_FIRST_REVIEW ou REVIEWED
-- Grau de conhecimento	Valor fornecido pelo Learning quando disponível; caso contrário, ausência explícita
+- Estado de aprendizagem:	NOT_STUDIED, AWAITING_FIRST_REVIEW ou REVIEWED
+- Grau de conhecimento:	Valor fornecido pelo Learning quando disponível; caso contrário, ausência explícita
 
 O Reader não precisa receber datas de revisão, histórico detalhado ou estatísticas para a funcionalidade atual. Esses dados só deverão ser adicionados ao contrato se uma funcionalidade concreta passar a exigi-los.
 
