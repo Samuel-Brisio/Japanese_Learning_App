@@ -97,11 +97,12 @@ O Reader não precisa receber datas de revisão, histórico detalhado ou estatí
 
 ## 4. Questões pendentes
 
-- Definir o contrato de consulta em lote do estado de aprendizagem para o Reader.
+- Definir o contrato técnico de consulta em lote Reader–Learning, incluindo identificação do usuário e das palavras, formato de retorno e tratamento de erros.
 - Definir a métrica e o limiar usados pela decisão automática de furigana.
-- Definir como a preferência manual será identificada por usuário e por palavra.
-- Definir persistência, erros e atualização dos dados consultados.
-- Especificar os contratos de execução e de resultado do Processing.
+- Definir a representação interna da declaração de conhecimento e como ela inicializa o estado/agendamento do SRS.
+- Escolher a estratégia SRS e definir os intervalos concretos de revisão.
+- Definir persistência, consistência e limites transacionais do Learning.
+- Especificar os contratos de execução, acompanhamento e resultado do Processing.
 
 ## 5. Evolução
 
