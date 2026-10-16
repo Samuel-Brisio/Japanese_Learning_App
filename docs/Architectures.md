@@ -1,7 +1,7 @@
 # Documentação de Arquitetura — MVP
 
-**Versão:** 0.2 
-**Status:** Em desenvolvimento  
+**Versão:** 0.5  
+**Status:** Em desenvolvimento; stack e publicação atualizadas em 0.5  
 **Escopo:** Arquitetura do MVP
 
 ## 1. Objetivo
@@ -249,30 +249,20 @@ Essas questões serão definidas a partir dos fluxos concretos do MVP.
 
 ---
 
-## 7. ADR-005 — Processamento isolado sob demanda
+## 7. ADR-005 — Isolamento do Processing
 
-**Status:** Aceito  
-**Contexto:** Execução de processos de análise independentes do fluxo principal da aplicação.
+**Status:** Parcialmente substituído pelo ADR-009  
+**Contexto:** Execução de análise linguística independente do backend principal.
 
 ### Contexto e problema
 
-Algumas operações de processamento precisam executar de maneira independente do ciclo normal de requisições da aplicação. Elas devem ter um ambiente de execução isolado e não precisam permanecer ativas continuamente.
+O processamento linguístico precisa manter seus próprios componentes e dependências sem acoplar o núcleo do backend à implementação de NLP.
 
-No MVP, o processamento será iniciado manualmente por um administrador.
+### Decisão vigente
 
-### Decisão
+Processing será uma aplicação separada. A escolha tecnológica vigente é Python com FastAPI, formalizada no ADR-009. O isolamento do componente é aceito; o modo de execução e implantação ainda não foi decidido.
 
-Executar o processamento sob demanda em um contêiner Docker temporário.
-
-O fluxo geral será:
-
-1. O administrador solicita a execução.
-2. O sistema inicia o ambiente de processamento.
-3. O processo executa a análise.
-4. Os resultados são devolvidos ou persistidos conforme o contrato definido para a operação.
-5. O contêiner é encerrado após a conclusão.
-
-O processamento não será tratado como um serviço permanentemente ativo.
+A proposta anterior de executar exclusivamente em um contêiner Docker temporário não deve ser tratada como decisão definitiva. Docker pode ser usado na implantação, mas serviço continuamente ativo versus execução sob demanda permanece pendente.
 
 ### Consequências positivas
 
@@ -331,3 +321,168 @@ Cada ADR deverá conter:
 Decisões substituídas deverão ser marcadas como `Superseded`, mantendo o histórico e a justificativa para a mudança.
 
 O objetivo desta documentação não é prever toda a implementação, mas preservar as decisões importantes e tornar explícitas as razões pelas quais a arquitetura evolui de determinada maneira.
+---
+
+## 10. ADR-006 — Contrato explícito Reader–Learning com fallback de leitura
+
+**Status:** Aceito  
+**Contexto:** Consulta do estado de aprendizagem para apresentação do texto.
+
+### Decisão
+
+Reader passa explicitamente o identificador do usuário autenticado a Learning por uma interface interna. O identificador deve vir de contexto confiável do lado servidor, não de um valor de cliente aceito sem validação.
+
+A consulta é feita em lote, com identificadores lexicais canônicos únicos. Learning retorna um resultado por identificador, correlacionado por `wordId`, e não pela ordem da resposta. Cada resultado tem `status` (`SUCCESS`, `NOT_FOUND` ou `LOOKUP_FAILED`) e `learningState` quando disponível (`NOT_STUDIED`, `AWAITING_FIRST_REVIEW` ou `REVIEWED`).
+
+`NOT_STUDIED` é um resultado bem-sucedido: a palavra existe no catálogo global, mas ainda não foi adicionada ao vocabulário do usuário. `NOT_FOUND` indica identificador lexical desconhecido ou indisponível. `LOOKUP_FAILED` indica que Learning não conseguiu determinar o resultado para aquela palavra. Uma falha individual não invalida os demais resultados do lote.
+
+O campo `knowledgeDegree` não é obrigatório no contrato do MVP. Sua necessidade, escala e cálculo ficam adiados até que a estratégia SRS e a experiência de leitura possam ser avaliadas. O limiar para ocultar furigana em `AUTO` também fica adiado.
+
+### Falhas e continuidade
+
+Reader é responsável por tentar novamente falhas de comunicação do lote. Se não conseguir uma resposta utilizável após as tentativas, continua exibindo o texto. Em `AUTO`, exibe furigana para palavras cujo estado não está disponível; `SHOW` e `HIDE` continuam respeitando a preferência explícita. Palavras afetadas recebem estilo neutro e discreto, sem cor baseada em conhecimento. Reader não altera o vocabulário em consequência da falha.
+
+Mensagens explícitas ao usuário sobre palavras que não carregaram corretamente ficam adiadas para futuras iterações.
+
+### Consequências
+
+- A leitura não depende da disponibilidade contínua de Learning para permanecer utilizável.
+- O contrato expõe apenas dados necessários ao Reader.
+- O cálculo do conhecimento e o ajuste da apresentação permanecem flexíveis.
+- O Reader precisa distinguir falhas de comunicação do lote e resultados individuais.
+
+---
+
+## 11. ADR-007 — Catálogo lexical global e progresso individual
+
+**Status:** Aceito  
+**Contexto:** Modelo conceitual de vocabulário e progresso.
+
+### Decisão
+
+Separar conceitualmente os dados em duas áreas:
+
+1. **Catálogo lexical global:** palavras lexicais canônicas e associações entre formas observadas e palavras canônicas, compartilhadas entre usuários e mantidas por Learning.
+2. **Dados de aprendizagem por usuário:** inclusão no vocabulário, estado de aprendizagem, declarações de conhecimento, conhecimento de kanji e histórico de revisão, associados a cada usuário.
+
+Uma palavra canônica, como `見る`, deve ter uma única entrada compartilhada no catálogo. Usuários diferentes podem compartilhar essa entrada e manter estados de aprendizagem diferentes. O conhecimento de uma palavra é independente do conhecimento dos kanji que a compõem.
+
+### Consequências
+
+- Evita duplicar a mesma informação lexical para cada usuário.
+- Separa dados de referência linguística do progresso pessoal.
+- Mantém explícito que o estado de aprendizagem pertence à relação entre usuário e palavra, não à palavra global.
+
+Esta decisão é conceitual; não determina ainda tabelas, chaves estrangeiras, banco de dados ou estrutura física de persistência.
+
+---
+
+## 12. ADR-008 — Publicação idempotente e recuperação de processamento
+
+**Status:** Aceito  
+**Contexto:** Publicação de textos preparados por Processing no Reader.
+
+### Decisão
+
+Processing envia a Reader um texto completo, validado e pronto para leitura em uma única requisição de publicação. Reader valida a estrutura e persiste o texto, mas não repete a análise linguística. Elementos sem análise são permitidos somente quando explicitamente identificados e quando a ordem e o conteúdo original são preservados.
+
+Reader cria `textId` na primeira persistência bem-sucedida e mantém a associação entre `processingId` e `textId`. `processingId` funciona como chave de idempotência. Uma repetição de `PUBLISH` para uma publicação já concluída retorna `ALREADY_PUBLISHED` sem duplicar o texto. `REPLACE` atualiza um texto existente, mantém seu `textId` e não cria texto novo quando o identificador não existe.
+
+A substituição só entra em vigor após validação e persistência completas; a versão anterior permanece disponível em caso de falha. Reader não usa `attemptNumber` para decidir qual versão é mais recente; Processing é responsável por impedir que requisições obsoletas substituam versões novas.
+
+A resposta conceitual usa os estados `PUBLISHED`, `ALREADY_PUBLISHED`, `REPLACED`, `INVALID_REQUEST` e `PUBLICATION_FAILED`. A publicação só é considerada concluída quando Reader confirma que o texto foi persistido e está disponível para leitura.
+
+Processing mantém checkpoints duráveis e artefatos de recuperação. O fluxo prevê os estados `PENDING`, `PROCESSING`, `WAITING_FOR_HUMAN_REVIEW`, `WAITING_FOR_PUBLICATION`, `WAITING_FOR_MANUAL_PUBLICATION`, `PUBLISHED` e `FAILED`. `FAILED` é reservado para situações irrecuperáveis. Conflitos lexicais exigem revisão administrativa; correções explícitas são revalidadas por Learning antes de nova publicação. No MVP, a recuperação administrativa usa exportação e reenvio manual de JSON.
+
+### Consequências
+
+- Uma confirmação perdida pode ser recuperada sem duplicar textos.
+- A responsabilidade pela análise, validação, persistência e recuperação fica explícita.
+- A versão já publicada permanece disponível durante a revalidação.
+- Detalhes como esquema JSON, retries, autenticação administrativa e mapeamento HTTP continuam adiados.
+
+
+---
+
+## 13. ADR-009 — Stack híbrida: NestJS para a aplicação e FastAPI para Processing
+
+**Status:** Aceito
+
+### Contexto
+
+A aplicação combina funcionalidades tradicionais de backend com uma área de processamento linguístico para japonês. Usar uma única linguagem em todos os componentes não é obrigatório e poderia limitar a escolha das bibliotecas de NLP. Ao mesmo tempo, a aplicação principal precisa de limites de domínio claros e contratos internos explícitos.
+
+### Decisão
+
+- A aplicação principal será desenvolvida com **NestJS e TypeScript**, organizada como monólito modular por domínio.
+- **PostgreSQL** será o banco relacional principal.
+- O componente Processing será uma aplicação separada em **Python com FastAPI**, comunicando-se com a aplicação principal por contratos HTTP/JSON explícitos.
+- As migrações SQL versionadas serão a fonte de verdade do esquema. A escolha de ORM/query layer no NestJS ainda não foi fechada.
+- FastAPI fornece a API do Processing; as bibliotecas e o pipeline de análise linguística serão selecionados separadamente.
+
+### Limites
+
+A escolha de uma aplicação FastAPI separada não significa que o sistema inteiro deva ser convertido em microserviços. Account, Learning e Reader permanecem módulos da aplicação NestJS. Processing não é proprietário do catálogo lexical e não deve escrever diretamente nas tabelas de domínio do Learning ou do Reader.
+
+O modo de execução do Processing (serviço ativo ou execução sob demanda) ainda será decidido na implantação. A decisão tecnológica não obriga a adoção de broker, Kubernetes ou outra infraestrutura adicional no MVP.
+
+### Consequências
+
+- O backend principal mantém uma estrutura modular em TypeScript.
+- Processing pode usar o ecossistema Python para NLP.
+- A comunicação entre os componentes exige contratos versionados e tratamento explícito de falhas.
+- O desenvolvimento e a implantação passam a ter dois ambientes de execução, o que adiciona alguma complexidade operacional.
+
+## 14. ADR-010 — Identidade e idempotência da publicação Reader–Processing
+
+**Status:** Aceito
+
+### Decisão
+
+`processing_id` é gerado por Processing e identifica uma operação lógica; `text_id` é gerado por Reader e identifica o texto persistido. Processing não conhece `text_id` antes da primeira publicação. Na publicação inicial, Reader devolve o `text_id`; na substituição, Processing já conhece o `text_id` do texto existente e o envia na requisição.
+
+Uma operação inicial usa `PUBLISH` sem `text_id`. Uma substituição usa `REPLACE` com `text_id` e `expected_version`. Cada operação lógica nova usa um novo `processing_id`; retries da mesma operação reutilizam o ID e o payload originais.
+
+Reader mantém um registro durável das operações concluídas, com `processing_id` único, `text_id`, tipo de operação, fingerprint do pedido e versão publicada. A persistência do texto e do registro idempotente é atômica. Um retry idêntico devolve o resultado original e não cria outro texto nem incrementa a versão novamente. Reutilizar o mesmo ID com payload diferente é conflito.
+
+A substituição mantém `text_id`, incrementa a versão e atualiza `Text.processing_id` somente quando toda a operação é concluída com sucesso. Falhas preservam a versão publicada anterior. Uma resposta perdida é tratada como resultado desconhecido; Processing repete a mesma operação para recuperar o resultado, sem inventar `text_id`.
+
+### Consequências
+
+- Publicação inicial e substituição são explicitamente distintas.
+- Uma falha de transporte não causa duplicação quando a operação é repetida.
+- O histórico de operações precisa ser preservado separadamente do `Text.processing_id`, que aponta somente para a operação que publicou a versão atual.
+- A implementação deve tratar concorrência e conflito de versão no banco, não apenas em verificações na aplicação.
+
+## 15. ADR-011 — Migrações SQL versionadas
+
+**Status:** Aceito
+
+### Decisão
+
+O esquema PostgreSQL será mantido por migrações SQL numeradas e versionadas, registradas em uma tabela `schema_migrations`. Cada migração é aplicada uma única vez, em ordem; migrações já aplicadas não são editadas. Alterações posteriores são representadas por novas migrações. Sempre que suportado, cada migração deve ser aplicada em transação. Dados de seed e teste ficam separados das migrações estruturais.
+
+### Consequências
+
+- O histórico do banco é reproduzível em ambientes de desenvolvimento e produção.
+- O SQL é a fonte de verdade do esquema, independentemente do ORM escolhido.
+- Alterações devem ser testadas em desenvolvimento antes de serem aplicadas no VPS de produção.
+- Backups externos ao servidor são necessários antes de mudanças de produção importantes.
+
+## 16. ADR-012 — Identificadores e convenções de persistência
+
+**Status:** Aceito
+
+- IDs de entidades comuns usam UUID gerado pelo banco por padrão.
+- Reader gera `text_id`; Processing gera `processing_id`.
+- Timestamps usam `TIMESTAMPTZ`; timestamps de criação usam `CURRENT_TIMESTAMP` quando apropriado.
+- Texto é UTF-8; a aplicação normaliza valores japoneses para Unicode NFC antes de aplicar unicidade. Não usar NFKC por padrão.
+- Restrições de FK são restritivas por padrão; não usar exclusão em cascata indiscriminadamente.
+- Não introduzir índices sem uma consulta concreta que os justifique.
+
+## 17. Artefatos de referência
+
+- `Modules.md`: responsabilidades, limites e contratos conceituais entre módulos.
+- `DataModel.md`: tabelas, campos, chaves, restrições e cardinalidades.
+- `CommunicationContract.md`: requisições/respostas, estados, erros, retries e idempotência.
+- `ImplementationPlan.md`: escopo do MVP, etapas e pendências de implementação.
