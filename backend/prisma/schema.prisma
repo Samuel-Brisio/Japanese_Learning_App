@@ -11,3 +11,21 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// User Table
+enum FuriganaPreference {
+  SHOW
+  HIDE
+}
+
+model User {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @map("user_id") @db.Uuid
+  name               String             @db.Text
+  email              String             @unique @db.Text
+  passwordHash       String             @map("password_hash") @db.Text
+  furiganaPreference FuriganaPreference @default(SHOW) @map("furigana_preference")
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("user")
+}
