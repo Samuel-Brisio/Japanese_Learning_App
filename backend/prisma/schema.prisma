@@ -32,15 +32,15 @@ model User {
 }
 
 model Text {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @map("text_id") @db.Uuid
-  ownerId         String   @map("owner_id") @db.Uuid
-  processingId    String   @map("processing_id") @db.Uuid
-  originalContent String   @map("original_content") @db.Text
-  elements        Json
-  version         Int      @default(1)
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @map("text_id") @db.Uuid
+  ownerId      String   @map("owner_id") @db.Uuid
+  processingId String   @map("processing_id") @db.Uuid
+  textJson         Json
+  version      Int      @default(1)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  owner User @relation(fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
   @@index([ownerId])
   @@index([processingId])
