@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
+import type { Prisma } from '../../../../generated/prisma/client.js';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service.js';
-import { StructuredText, Text } from '../../domain/models/text.entity.js';
+import { Text } from '../../domain/models/text.entity.js';
+import type { StructuredText } from '../../domain/models/text.entity.js';
 import { TextRepository } from '../../domain/ports/text.repository.js';
 
 const textSelect = {
   id: true,
   ownerId: true,
   processingId: true,
-  text: true,
+  textJson: true,
   version: true,
   createdAt: true,
   updatedAt: true,
@@ -17,7 +19,7 @@ type PersistedText = {
   id: string;
   ownerId: string;
   processingId: string;
-  text: StructuredText;
+  textJson: Prisma.JsonValue;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -33,8 +35,8 @@ export class PrismaTextRepository implements TextRepository {
         id: text.id,
         ownerId: text.ownerId,
         processingId: text.processingId,
-        text: text.text,
-        version: 1,
+        textJson: text.text as unknown as Prisma.InputJsonValue,
+        version: text.version,
         createdAt: text.createdAt,
         updatedAt: text.updatedAt,
       },
@@ -61,6 +63,29 @@ export class PrismaTextRepository implements TextRepository {
   }
 
   private toDomain(record: PersistedText): Text {
-    return Text.restore(record);
+    return Text.restore({
+      id: record.id,
+      ownerId: record.ownerId,
+      processingId: record.processingId,
+      text: parseStructuredText(record.textJson),
+      version: record.version,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    });
   }
+}
+
+function parseStructuredText(value: Prisma.JsonValue): StructuredText {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value) ||
+    !('language' in value) ||
+    !('title' in value) ||
+    !('sentences' in value)
+  ) {
+    throw new Error('Persisted text has an invalid structured content');
+  }
+
+  return value as unknown as StructuredText;
 }
