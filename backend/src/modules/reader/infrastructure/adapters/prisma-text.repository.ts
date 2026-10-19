@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import type { Prisma } from '../../../../generated/prisma/client.js';
+import { Prisma } from '../../../../generated/prisma/client.js';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service.js';
 import { Text } from '../../domain/models/text.entity.js';
 import type { StructuredText } from '../../domain/models/text.entity.js';
 import { TextRepository } from '../../domain/ports/text.repository.js';
+import { UserNotFoundError } from '../../application/errors/user-not-found.error.js'
 
 const textSelect = {
   id: true,
@@ -30,17 +31,28 @@ export class PrismaTextRepository implements TextRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async save(text: Text): Promise<void> {
-    await this.prisma.text.create({
-      data: {
-        id: text.id,
-        ownerId: text.ownerId,
-        processingId: text.processingId,
-        textJson: text.text as unknown as Prisma.InputJsonValue,
-        version: text.version,
-        createdAt: text.createdAt,
-        updatedAt: text.updatedAt,
-      },
-    });
+    try {
+      await this.prisma.text.create({
+        data: {
+          id: text.id,
+          ownerId: text.ownerId,
+          processingId: text.processingId,
+          textJson: text.text as unknown as Prisma.InputJsonValue,
+          version: text.version,
+          createdAt: text.createdAt,
+          updatedAt: text.updatedAt,
+        },
+      });
+    } catch (error) {
+      // Check for Prisma foreign key constraint failure (P2003)
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2003'
+      ) {
+        throw new UserNotFoundError(text.ownerId);
+      }
+      throw error;
+    }
   }
 
   async findOwned(ownerId: string): Promise<Text[]> {

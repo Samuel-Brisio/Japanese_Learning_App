@@ -5,8 +5,8 @@ Backend
 [x] Implement GET /reader/texts
 [x] Implement GET /reader/texts/:textId
 [ ] Add endpoint tests
-[ ] Test invalid or malformed structured text.
-[ ] Test nonexistent text IDs and database errors.
+[x] Test invalid or malformed structured text.
+[x] Test nonexistent text IDs and database errors.
 [ ] Verify that a user cannot retrieve another user's private text.
 
 Frontend
