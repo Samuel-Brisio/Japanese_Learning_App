@@ -1,10 +1,13 @@
 Backend
-[ ] Inspect the existing NestJS structure and dependencies
-[ ] Create the Reader module
-[ ] Define the text response contract and sample content
-[ ] Implement GET /reader/texts
-[ ] Implement GET /reader/texts/:textId
+[x] Inspect the existing NestJS structure and dependencies
+[x] Create the Reader module
+[x] Define the text response contract and sample content
+[x] Implement GET /reader/texts
+[x] Implement GET /reader/texts/:textId
 [ ] Add endpoint tests
+[ ] Test invalid or malformed structured text.
+[ ] Test nonexistent text IDs and database errors.
+[ ] Verify that a user cannot retrieve another user's private text.
 
 Frontend
 [ ] Inspect the existing frontendWeb setup
