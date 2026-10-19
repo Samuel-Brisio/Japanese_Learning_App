@@ -18,7 +18,7 @@ export class PublicationController {
   @Post()
   @HttpCode(HttpStatus.OK)
   async handlePublication(@Body() dto: ReceiveStructuredTextDto) {
-    const processingId = dto.processingId ?? dto.processing_id;
+    const processingId = dto.processingId;
 
     if (!processingId) {
       throw new BadRequestException('processingId is required');
