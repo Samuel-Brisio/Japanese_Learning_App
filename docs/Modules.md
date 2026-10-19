@@ -13,6 +13,27 @@ Este documento descreve os módulos funcionais do MVP, suas responsabilidades e 
 
 **Responsabilidade:** gerenciar a experiência de leitura e as regras de apresentação do conteúdo.
 
+#### Estrutura hexagonal e DDD
+
+O Reader é organizado como um módulo hexagonal:
+
+- **Domínio:** `Text` representa o agregado de texto estruturado e protege invariantes
+  como conteúdo não vazio e versão maior ou igual a 1.
+- **Aplicação:** casos de uso recebem/publicam um texto estruturado, listam os
+  textos do usuário e consultam um texto específico. Eles dependem apenas da
+  porta `TextRepository`.
+- **Porta de saída:** `TextRepository` define as operações de leitura necessárias
+  pelo domínio de aplicação, sem mencionar Prisma ou HTTP.
+- **Adaptador de saída:** `PrismaTextRepository` traduz registros do Prisma para a
+  entidade `Text`.
+- **Adaptadores de entrada:** `ReaderPublicationController` recebe o texto
+  estruturado do Processing; `ReaderController` expõe as consultas do frontend
+  e converte erros de aplicação em respostas HTTP.
+
+O `ReaderModule` conecta a porta ao adaptador Prisma por injeção de dependência.
+Assim, os casos de uso podem ser testados sem banco, e a persistência pode ser
+substituída sem alterar o domínio ou a API.
+
 O Reader apresenta o conteúdo ao usuário e decide como renderizar palavras, incluindo se deve exibir furigana. Essa decisão considera a preferência manual do usuário para a palavra e, quando não existe uma preferência definida, o estado de aprendizagem fornecido pelo Learning.
 
 O Reader é responsável por armazenar e consultar a preferência de apresentação de furigana por palavra. A preferência possui três estados conceituais:

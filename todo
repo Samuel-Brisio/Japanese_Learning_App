@@ -1,0 +1,19 @@
+Backend
+[ ] Inspect the existing NestJS structure and dependencies
+[ ] Create the Reader module
+[ ] Define the text response contract and sample content
+[ ] Implement GET /reader/texts
+[ ] Implement GET /reader/texts/:textId
+[ ] Add endpoint tests
+
+Frontend
+[ ] Inspect the existing frontendWeb setup
+[ ] Create the text catalog page
+[ ] Create the reading page with furigana
+[ ] Connect the pages to the Reader API
+[ ] Add loading, empty, and error states
+
+Integration
+[ ] Run backend and frontend together
+[ ] Open a text in the browser
+[ ] Verify Japanese characters, readings, punctuation, and sentence order

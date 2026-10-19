@@ -94,6 +94,22 @@ Depois da consulta, Processing envia propostas de dados lexicais necessários pa
 - NFC deve ser aplicada consistentemente antes de verificar unicidade. A identidade de `CanonicalWord` usa forma canônica + leitura.
 - A forma observada e sua leitura não substituem a identidade canônica. Cada ocorrência no texto continua sendo representada individualmente em `Text.elements`.
 
+## 4.1. Reader → frontend: consulta de textos
+
+Enquanto a autenticação ainda não está implementada, o frontend informa o usuário
+atual na query `userId`. O Reader sempre combina esse identificador com o `textId`
+na consulta de detalhe, portanto um texto de outro usuário responde `404`.
+
+- `GET /reader/texts?userId={userId}` lista os textos do usuário, ordenados por
+  `updatedAt` decrescente.
+- `GET /reader/texts/{textId}?userId={userId}` retorna um texto estruturado.
+
+A resposta de cada texto tem `textId`, `originalContent`, `elements`, `version`,
+`createdAt` e `updatedAt`. `originalContent` é a fonte completa para exibição;
+`elements` é o array ordenado que o frontend pode usar para renderização
+linguística. `userId` será substituído pelo usuário autenticado quando o módulo
+Account disponibilizar o contexto de autenticação.
+
 ## 5. Processing → Reader: publicação e substituição
 
 ### Identificadores
@@ -106,13 +122,18 @@ Depois da consulta, Processing envia propostas de dados lexicais necessários pa
 
 `POST /internal/api/v1/reader/texts/publication`
 
+O Reader recebe o texto estruturado neste endpoint. O frontend não monta nem
+envia a estrutura linguística; ele apenas consulta o conteúdo persistido pelos
+endpoints de leitura acima.
+
 ### Publicação inicial
 
 Pedido conceitual (sem `text_id`):
 
 ```json
 {
-  "processing_id": "UUID",
+  "ownerId": "UUID",
+  "processingId": "UUID",
   "operation": "PUBLISH",
   "attempt_number": 1,
   "text_id": null,
