@@ -208,7 +208,7 @@ Armazena o texto publicado e sua estrutura linguística atual. O conteúdo origi
 | `created_at` | TIMESTAMPTZ | Obrigatório; default `CURRENT_TIMESTAMP` |
 | `updated_at` | TIMESTAMPTZ | Obrigatório; atualizado somente quando uma nova versão é publicada |
 
-O JSON `elements` pode conter parágrafos, frases, títulos, pontuação, segmentos de palavras, leituras, referências `canonicalWordId`, anotações gramaticais e outros elementos estruturais. O esquema interno completo ainda será definido e validado por Reader. Não são criadas tabelas independentes para ocorrências de palavras, frases ou parágrafos no MVP.
+O JSON `elements` pode conter parágrafos, frases, títulos, pontuação, segmentos de palavras, leituras, referências `canonicalWordId`, referências `WordId`, anotações gramaticais e outros elementos estruturais. O esquema interno completo ainda será definido e validado por Reader. Não são criadas tabelas independentes para ocorrências de frases ou parágrafos no MVP.
 
 Cada ocorrência deve preservar a ordem e a substring original correspondente. A presença de `canonicalWordId` depende da resolução lexical; Reader pode aceitar elementos explicitamente não analisados se a estrutura e o conteúdo original forem preservados.
 

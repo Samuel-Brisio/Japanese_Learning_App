@@ -1,0 +1,74 @@
+{
+  "ownerId": "ADMIN_USER_UUID",
+  "processingId": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+  "operation": "PUBLISH",
+  "attemptNumber": 1,
+  "textId": null,
+  "expectedVersion": null,
+  "text": {
+    "language": "ja",
+    "title": {
+      "content": "日本語の勉強",
+      "elements": [
+        {
+          "type": "word",
+          "content": "日本語",
+          "reading": "にほんご",
+          "canonicalWordId": "canonical-nihongo",
+          "wordId": "surface-nihongo"
+        },
+        {
+          "type": "particle",
+          "content": "の"
+        },
+        {
+          "type": "word",
+          "content": "勉強",
+          "reading": "べんきょう",
+          "canonicalWordId": "canonical-benkyou",
+          "wordId": "surface-benkyou"
+        }
+      ]
+    },
+    "sentences": [
+      {
+        "content": "私は学校に行きました。",
+        "elements": [
+          {
+            "type": "word",
+            "content": "私",
+            "reading": "わたし",
+            "canonicalWordId": "canonical-watashi",
+            "wordId": "surface-watashi"
+          },
+          {
+            "type": "particle",
+            "content": "は"
+          },
+          {
+            "type": "word",
+            "content": "学校",
+            "reading": "がっこう",
+            "canonicalWordId": "canonical-gakkou",
+            "wordId": "surface-gakkou"
+          },
+          {
+            "type": "particle",
+            "content": "に"
+          },
+          {
+            "type": "word",
+            "content": "行きました",
+            "reading": "いきました",
+            "canonicalWordId": "canonical-iku",
+            "wordId": "surface-ikimashita"
+          },
+          {
+            "type": "punctuation",
+            "content": "。"
+          }
+        ]
+      }
+    ]
+  }
+}

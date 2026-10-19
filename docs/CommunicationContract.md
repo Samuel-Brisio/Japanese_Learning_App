@@ -132,16 +132,53 @@ Pedido conceitual (sem `text_id`):
 
 ```json
 {
-  "ownerId": "UUID",
+  "ownerId": "ADMIN_USER_UUID",
   "processingId": "UUID",
   "operation": "PUBLISH",
-  "attempt_number": 1,
-  "text_id": null,
-  "expected_version": null,
-  "original_content": "私は学校へ行きました。",
-  "elements": []
+  "attemptNumber": 1,
+  "textId": null,
+  "expectedVersion": null,
+  "text": {
+    "language": "ja",
+    "title": {
+      "content": "日本語の勉強",
+      "elements": [
+        {
+          "type": "word",
+          "content": "日本語",
+          "reading": "にほんご",
+          "canonicalWordId": "canonical-nihongo",
+          "wordId": "surface-nihongo"
+        }
+      ]
+    },
+    "sentences": [
+      {
+        "content": "私は学校に行きました。",
+        "elements": [
+          {
+            "type": "word",
+            "content": "私",
+            "reading": "わたし",
+            "canonicalWordId": "canonical-watashi",
+            "wordId": "surface-watashi"
+          },
+          {
+            "type": "particle",
+            "content": "は"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
+
+No MVP, `ownerId` deve ser o identificador do usuário administrador criado no
+banco. O Reader não fixa esse valor no código: Processing o envia explicitamente
+em cada publicação. `canonicalWordId` e `wordId` são identificadores opacos
+fornecidos pelo Processing; seus formatos podem mudar e não são validados como
+UUID pelo Reader.
 
 Reader valida o documento, gera `text_id`, persiste a versão 1 e grava o resultado idempotente na mesma transação.
 

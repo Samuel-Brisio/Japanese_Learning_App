@@ -1,9 +1,27 @@
+export interface StructuredTextElement {
+  type: string;
+  content: string;
+  reading?: string;
+  canonicalWordId?: string;
+  wordId?: string;
+}
+
+export interface StructuredTextSection {
+  content: string;
+  elements: StructuredTextElement[];
+}
+
+export interface StructuredText {
+  language: string;
+  title: StructuredTextSection;
+  sentences: StructuredTextSection[];
+}
+
 export interface TextProps {
   id: string;
   ownerId: string;
   processingId: string;
-  originalContent: string;
-  elements: unknown;
+  text: StructuredText;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -27,7 +45,7 @@ export class Text {
   }
 
   static restore(props: TextProps): Text {
-    if (!props.originalContent.trim()) {
+    if (!props.text.title.content.trim() && !props.text.sentences) {
       throw new Error('Text original content cannot be empty');
     }
 
@@ -46,12 +64,8 @@ export class Text {
     return this.props.ownerId;
   }
 
-  get originalContent(): string {
-    return this.props.originalContent;
-  }
-
-  get elements(): unknown {
-    return this.props.elements;
+  get text(): StructuredText {
+    return this.props.text;
   }
 
   get processingId(): string {

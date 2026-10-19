@@ -1,7 +1,8 @@
+import { StructuredText } from '../../domain/models/text.entity.js';
+
 export class TextDetailDto {
   id: string;
-  originalContent: string;
-  elements: unknown;
+  text: StructuredText;
   version: number;
   createdAt: Date;
   updatedAt: Date;

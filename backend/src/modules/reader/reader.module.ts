@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../../infrastructure/database/prisma/prisma.module.js';
 import { ReaderController } from './infrastructure/http/reader.controller.js';
-// import { ReaderPublicationController } from './infrastructure/http/publication.controller.js';
+import { PublicationController } from './infrastructure/http/publication.controller.js';
 import { TEXT_REPOSITORY } from './domain/ports/text.repository.js';
 import { GetOwnedTextUseCase } from './application/use-cases/get-owned-text.use-case.js';
 import { ListOwnedTextsUseCase } from './application/use-cases/list-owned-texts.use-case.js';
@@ -10,8 +10,7 @@ import { PrismaTextRepository } from './infrastructure/adapters/prisma-text.repo
 
 @Module({
   imports: [PrismaModule],
-  // controllers: [ReaderController, ReaderPublicationController],
-  controllers: [ReaderController],
+  controllers: [ReaderController, PublicationController],
   providers: [
     GetOwnedTextUseCase,
     ListOwnedTextsUseCase,

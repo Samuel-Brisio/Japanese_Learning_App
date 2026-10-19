@@ -1,14 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../../infrastructure/database/prisma/prisma.service.js';
-import { Text } from '../../domain/models/text.entity.js';
+import { StructuredText, Text } from '../../domain/models/text.entity.js';
 import { TextRepository } from '../../domain/ports/text.repository.js';
 
 const textSelect = {
   id: true,
   ownerId: true,
   processingId: true,
-  originalContent: true,
-  elements: true,
+  text: true,
   version: true,
   createdAt: true,
   updatedAt: true,
@@ -18,8 +17,7 @@ type PersistedText = {
   id: string;
   ownerId: string;
   processingId: string;
-  originalContent: string;
-  elements: unknown;
+  text: StructuredText;
   version: number;
   createdAt: Date;
   updatedAt: Date;
@@ -35,8 +33,7 @@ export class PrismaTextRepository implements TextRepository {
         id: text.id,
         ownerId: text.ownerId,
         processingId: text.processingId,
-        originalContent: text.originalContent,
-        elements: text.elements as object,
+        text: text.text,
         version: 1,
         createdAt: text.createdAt,
         updatedAt: text.updatedAt,
