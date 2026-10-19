@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import type { ReceiveStructuredTextDto } from './dtos/receive-structured-text.dto.js';
 import { ReceiveStructuredTextUseCase } from '../../application/use-cases/receive-structured-text.use-case.js';
+import { InvalidPublicationError } from '../../application/errors/invalid-publication.error.js';
 
 @Controller('internal/api/v1/reader/texts/publication')
 export class PublicationController {
@@ -24,10 +25,18 @@ export class PublicationController {
       throw new BadRequestException('processingId is required');
     }
 
-    return this.receiveStructuredTextUseCase.execute({
-      ownerId: dto.ownerId,
-      processingId,
-      structuredText: dto.text,
-    });
+    try {
+      return await this.receiveStructuredTextUseCase.execute({
+        ownerId: dto.ownerId,
+        processingId,
+        structuredText: dto.text,
+      });
+    } catch (error) {
+      if (error instanceof InvalidPublicationError) {
+        throw new BadRequestException(error.message);
+      }
+
+      throw error;
+    }
   }
 }

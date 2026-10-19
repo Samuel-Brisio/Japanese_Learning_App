@@ -30,11 +30,15 @@ export interface TextProps {
 export class Text {
   private constructor(private readonly props: TextProps) {}
 
-  static create(props: Omit<TextProps, 'id' | 'version' | 'createdAt' | 'updatedAt'> & {
-    id: string;
-    now?: Date;
-  }): Text {
+  static create(
+    props: Omit<TextProps, 'id' | 'version' | 'createdAt' | 'updatedAt'> & {
+      id: string;
+      now?: Date;
+    },
+  ): Text {
     const now = props.now ?? new Date();
+
+    Text.validateStructuredText(props.text);
 
     return Text.restore({
       ...props,
@@ -44,11 +48,69 @@ export class Text {
     });
   }
 
-  static restore(props: TextProps): Text {
-    if (!props.text.title.content.trim() && !props.text.sentences) {
-      throw new Error('Text original content cannot be empty');
+  static validateStructuredTextElement(element: StructuredTextElement): void {
+    if (!element || typeof element.type !== 'string' || !element.type.trim()) {
+      throw new Error('Text element type cannot be empty');
+    }
+    if (
+      !element ||
+      typeof element.content !== 'string' ||
+      !element.content.trim()
+    ) {
+      throw new Error('Text element content cannot be empty');
     }
 
+    if (element.type === 'word') {
+      if (!element.canonicalWordId) {
+        throw new Error(
+          'Text element canonicalWordId is required for type "word"',
+        );
+      }
+      if (!element.wordId) {
+        throw new Error('Text element wordId is required for type "word"');
+      }
+      if (!element.reading) {
+        throw new Error('Text element reading is required for type "word"');
+      }
+    }
+  }
+
+  static validateStructuredTextSection(section: StructuredTextSection): void {
+    if (
+      !section ||
+      typeof section.content !== 'string' ||
+      !section.content.trim()
+    ) {
+      throw new Error('Text section content cannot be empty');
+    }
+
+    if (!Array.isArray(section.elements) || !section.elements.length) {
+      throw new Error('Text section elements are required');
+    }
+    section.elements.forEach((element) => {
+      Text.validateStructuredTextElement(element);
+    });
+  }
+
+  static validateStructuredText(text: StructuredText): void {
+    if (!text || typeof text.language !== 'string' || !text.language.trim()) {
+      throw new Error('Text language is required');
+    }
+
+    if (!text.title) {
+      throw new Error('Text title is required');
+    }
+    Text.validateStructuredTextSection(text.title);
+
+    if (!Array.isArray(text.sentences) || !text.sentences.length) {
+      throw new Error('Text sentences are required');
+    }
+    text.sentences.forEach((sentence) => {
+      Text.validateStructuredTextSection(sentence);
+    });
+  }
+
+  static restore(props: TextProps): Text {
     if (props.version < 1) {
       throw new Error('Text version must be at least 1');
     }

@@ -3,9 +3,6 @@ import type { ReceiveStructuredTextDto } from '../dtos/receive-structured-text.d
 
 export function createPublicationFingerprint(dto: ReceiveStructuredTextDto): string {
   const normalizedPayload = {
-    operation: dto.operation,
-    textId: dto.textId ?? null,
-    expectedVersion: dto.expectedVersion ?? null,
     ownerId: dto.ownerId,
     text: dto.text,
   };
